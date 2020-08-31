@@ -50,10 +50,6 @@ local function handle_input(input)
   return from, to
 end
 
-local function is_stalled()
-  return false
-end
-
 local function fall()
   res = false
   for y = down_edge, up_edge + 1, -1 do
@@ -137,6 +133,28 @@ local function check_triples()
     end
   end
   return res
+end
+local function is_stalled()
+  directions = {{0,1},{0,-1},{1,0},{-1,0}}
+  for _,dir in pairs(directions) do
+    for y = up_edge, down_edge do
+      if (y + dir[1] >= up_edge) and (y + dir[1] <= down_edge) then
+        for x = left_edge, right_edge do
+          if (x + dir[2] >= left_edge) and (x + dir[2] <= right_edge) then
+            cell = {y + dir[1], y + dir[2]}
+            matrix[cell[1]][cell[2]], matrix[y][x] =  matrix[y][x], matrix[cell[1]][cell[2]]
+            horizontal_res = check_cell_triplets(cell, 0, 1)
+            vertical_res = check_cell_triplets(cell, 1, 0)
+            matrix[cell[1]][cell[2]], matrix[y][x] =  matrix[y][x], matrix[cell[1]][cell[2]]
+            if (horizontal_res ~= nil)or(vertical_res ~= nil) then
+              return false
+            end
+          end
+        end
+      end
+    end
+  end
+  return true
 end
 
 function init()
