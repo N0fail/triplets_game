@@ -23,8 +23,28 @@ local up_edge = 0
 local down_edge = 9
 local colors_count = 6
 
-local function check_input(input)
-  return true
+local exit = "exit"
+
+local function handle_input(input)
+  if input == exit then 
+    return exit
+  end
+  y, x, dir = string.match(input, 'm (%d+) (%d+) ([u,d,l,r])')
+  if (x == nil) or (y == nil) then 
+    return false
+  end
+  
+  from = {tonumber(y), tonumber(x)}
+  if dir == "u" then 
+    to = {from[1] - 1, from[2]}
+  elseif dir == "d" then 
+    to = {from[1] + 1, from[2]}
+  elseif dir == "l" then 
+    to = {from[1], from[2] - 1}
+  else
+    to = {from[1], from[2] + 1}
+  end
+  return from, to
 end
 
 local function is_stalled()
@@ -53,18 +73,25 @@ end
 
 function tick() --[[ returns true if any movement was made --]]
   
-  if fall(matrix) --[[ if some pieces fall --]]
-    then return true
+  if fall(matrix) then --[[ if some pieces fall --]]
+    return true
   end
   
-  if check_triples() --[[ if new triple found --]]
-    then return true
+  if check_triples() then --[[ if new triple found --]]
+    return true
   end
   
   return false
 end
 
 function move(from, to)
+  if (from[1] > down_edge)or(from[1] < up_edge)or(from[2] < left_edge)or(from[2] > right_edge)
+     or(to[1] > down_edge)or(to[1] < up_edge)or(to[2] < left_edge)or(to[2] > right_edge) then
+     return false
+  else
+    matrix[from[1]][from[2]], matrix[to[1]][to[2]] = matrix[to[1]][to[2]], matrix[from[1]][from[2]]
+    return true
+  end
 end
 
 function mix()
@@ -87,19 +114,28 @@ function dump()
 end
 
 init()
-while (input ~="exit") do
+dump()
+while (input ~=exit) do
   repeat
     io.write("Please, make a move in format m x(0-9) y(0-9) direction(r,l,u,d)\n")
     input = io.read()
-  until check_input(input)
+    from, to = handle_input(input)
+  until y ~= false
   
-  repeat 
-    dump()
-  until tick() == false
+  if from ~= exit then
+    if move(from,to) == false then 
+      io.write("Out of range\n")
+    else
+      repeat 
+        dump()
+      until tick() == false
   
-  while is_stalled() do
-    mix()
-  end
+      while is_stalled() do
+        mix()
+      end --[[ while --]]
+    end --[[ if move--]]
+  end --[[ if from--]]
+  
 end
 
 return triplets_game
