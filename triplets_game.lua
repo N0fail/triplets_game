@@ -206,6 +206,7 @@ local function handle_input(input) --[[ check input format --]]
   return from, to
 end
 function init() --[[ fills field with random colors, with no ready triples, with possible triples --]]
+  math.randomseed(os.time())
   repeat
     for y = UP_EDGE, DOWN_EDGE do
       matrix[y] = {}
