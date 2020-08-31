@@ -13,9 +13,15 @@ local field = {{'    0 1 2 3 4 5 6 7 8 9'},
             {"8 |"},
             {"9 |"}}
 
-local input = 'a';
+local input = 'a'
 
-local matrix;
+local matrix = {}
+
+local left_edge = 0
+local right_edge = 9
+local up_edge = 0
+local down_edge = 9
+local colors_count = 6
 
 local function check_input(input)
   return true
@@ -34,7 +40,15 @@ local function check_triples()
 end
 
 function init()
-  matrix = 10;
+  repeat
+    for y = up_edge, down_edge do
+      matrix[y] = {}
+      for x = left_edge, right_edge do
+        matrix[y][x] = math.random(colors_count)
+      end
+    end
+    kek = "w"
+  until (is_stalled() == false) and (check_triples() == false)
 end
 
 function tick() --[[ returns true if any movement was made --]]
@@ -57,9 +71,9 @@ function mix()
 end
 
 function dump()
-  for i = 0, 9 do
-      for j = 0, 9 do
-        field[i+3][j+2] = string.char(string.byte("A") + j)
+  for y = up_edge, down_edge do
+      for x = left_edge, right_edge do
+        field[y+3][x+2] = string.char(string.byte("A") + matrix[y][x] - 1)
       end
   end
 
@@ -73,16 +87,15 @@ function dump()
 end
 
 init()
-io.write(matrix .. "\n")
 while (input ~="exit") do
   repeat
     io.write("Please, make a move in format m x(0-9) y(0-9) direction(r,l,u,d)\n")
     input = io.read()
   until check_input(input)
   
-  while tick() do
+  repeat 
     dump()
-  end
+  until tick() == false
   
   while is_stalled() do
     mix()
