@@ -33,18 +33,17 @@ local EMPTY_CELL = -33
 
 local LINE_NEEDED = 3
 
-local EXIT = "exit"
+local EXIT = "q"
 local HELP = "advice"
+local FPS_CHANGE = "set fps"
 
 local FPS = 3
 
-local function fall()
+local function fall() --[[ starting from the bottomn checks if blocks must fall --]]
+  --[[ returns true if any block has to fall --]]
   res = false
   for y = DOWN_EDGE, UP_EDGE + 1, -1 do
     for x = LEFT_EDGE, RIGHT_EDGE do
-      if (y == 1) and (x == 2) then
-        kek = "w"
-      end
       if (matrix[y][x] == EMPTY_CELL)and(matrix[y-1][x] < COLORS_COUNT)and(matrix[y-1][x] >= 0) then
         matrix[y][x], matrix[y-1][x] = matrix[y-1][x], matrix[y][x]
         res = true
@@ -52,7 +51,7 @@ local function fall()
     end
   end
   
-  for x = LEFT_EDGE, RIGHT_EDGE do
+  for x = LEFT_EDGE, RIGHT_EDGE do --[[ need to know if any block on top is empty --]]
     if matrix[UP_EDGE][x] == EMPTY_CELL then
       res = true
     end
@@ -60,7 +59,8 @@ local function fall()
   return res
 end
 
-local function fill_top()
+
+local function fill_top() --[[ fills empty top blocks --]]
   for x = LEFT_EDGE, RIGHT_EDGE do
     if matrix[0][x] == EMPTY_CELL then
       matrix[0][x] = math.random(0,COLORS_COUNT-1)
@@ -68,7 +68,9 @@ local function fill_top()
   end
 end
 
-local function check_cell_triplets(cell, dy, dx)
+
+local function check_cell_triplets(cell, dy, dx) --[[ recursively finds continuous chain of blocks with line length >= LINE_NEEDED, starting from cell --]]
+  --[[ returns all blocks in chain, if line length < LINENEEDED returns nil--]]
   local res = {cell}
   if (matrix[cell[1]][cell[2]] >= 0) and (matrix[cell[1]][cell[2]] < COLORS_COUNT) then
     color = matrix[cell[1]][cell[2]]
@@ -89,7 +91,7 @@ local function check_cell_triplets(cell, dy, dx)
   
   if #res >= LINE_NEEDED then
     for i = 2, #res do
-      local another_res = check_cell_triplets(res[i], 1 - dy, 1 - dx)
+      local another_res = check_cell_triplets(res[i], 1 - dy, 1 - dx) --[[ recursive call with oposite axis search--]]
       if another_res ~= nil then     
         for j = 2, #another_res do
           table.insert(res, another_res[j])
@@ -105,8 +107,8 @@ local function check_cell_triplets(cell, dy, dx)
 end
 
 
-
-local function check_triples()
+local function check_triples() --[[ calls check_cell_triplets for each cell --]]
+  --[[ returns all triples on the map --]]
   res = {}
   for y = UP_EDGE, DOWN_EDGE do
     for x = LEFT_EDGE, RIGHT_EDGE do
@@ -129,12 +131,13 @@ local function check_triples()
   end
   return res
 end
-local function remove_triples(cells)
+local function remove_triples(cells) --[[ marks all given cells as EXPLOSION_CELL --]]
   for _,cell in pairs(cells) do
     matrix[cell[1]][cell[2]] = EXPLOSION_CELL
   end
 end
-local function remove_explosions()
+
+local function remove_explosions() --[[ removes all EXPLOSION_CELL's from field --]]
   res = false
   for y = UP_EDGE, DOWN_EDGE do
     for x = LEFT_EDGE, RIGHT_EDGE do
@@ -146,7 +149,8 @@ local function remove_explosions()
   end
   return res
 end
-local function is_stalled()
+local function is_stalled() --[[ checks if it is impossible to make a triple --]]
+--[[ also returns first found cell to move to get triple(used for advice)--]]
   directions = {{0,1},{0,-1},{1,0},{-1,0}}
   for _,dir in pairs(directions) do
     for y = UP_EDGE, DOWN_EDGE do
@@ -168,13 +172,20 @@ local function is_stalled()
   end
   return true
 end
-local function handle_input(input)
+local function handle_input(input) --[[ check input format --]]
+  --[[ returns false if no field modification needed, returns from,to if move was made --]]
   if input == EXIT then 
     return EXIT
   elseif input == HELP then
     _,y,x = is_stalled()
     io.write(y .. " " .. x .. "\n")
     return false
+  else
+    new_fps = string.match(input, FPS_CHANGE..' (%d+)')
+    if new_fps ~= nil then
+      FPS = new_fps
+      return false
+    end
   end
   y, x, dir = string.match(input, 'm (%d+) (%d+) ([u,d,l,r])')
   if (x == nil) or (y == nil) then 
@@ -194,7 +205,7 @@ local function handle_input(input)
   end
   return from, to
 end
-function init()
+function init() --[[ fills field with random colors, with no ready triples, with possible triples --]]
   repeat
     for y = UP_EDGE, DOWN_EDGE do
       matrix[y] = {}
@@ -226,7 +237,8 @@ function tick() --[[ returns true if any movement was made --]]
 
 end
 
-function move(from, to)
+function move(from, to) --[[ makes a move --]]
+  --[[ returns true if move was successful, false else --]]
   if (from[1] > DOWN_EDGE)or(from[1] < UP_EDGE)or(from[2] < LEFT_EDGE)or(from[2] > RIGHT_EDGE)
      or(to[1] > DOWN_EDGE)or(to[1] < UP_EDGE)or(to[2] < LEFT_EDGE)or(to[2] > RIGHT_EDGE) then
     io.write("Out of range\n")
@@ -255,7 +267,7 @@ function move(from, to)
   end
 end
 
-function mix()
+function mix() --[[ shuffles field until there are no triples, there are possible triples --]]
   io.write("No possible triplets, mixing the field\n")
   repeat
     for i = 1,(RIGHT_EDGE - LEFT_EDGE)*(DOWN_EDGE - UP_EDGE) do
@@ -269,9 +281,9 @@ function mix()
   until (#triples == 0) and (is_stalled() == false)
 end
 
-function dump()
-  if socket ~= nil then
-    socket.sleep(1/FPS - (os.clock() - prev_frame_time))
+function dump() --[[ draws field --]]
+  if socket ~= nil then 
+    socket.sleep(1/FPS - (os.clock() - prev_frame_time)) --[[ simple fps limiter --]]
   end
   
   for y = UP_EDGE, DOWN_EDGE do
