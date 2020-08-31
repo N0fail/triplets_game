@@ -78,7 +78,9 @@ local function check_cell_triplets(cell, dy, dx)
   else
     return nil
   end
-  
+    
+  matrix[cell[1]][cell[2]] = colors_count --[[ prevent unlimited recursion --]]
+    
   for dir = -1, 1, 2 do
     cur = {cell[1] + dir*dy, cell[2] + dir*dx}
     while (cur[1] <= down_edge)and(cur[1] >= up_edge)and(cur[2] <= right_edge)and(cur[2] >= left_edge)and(matrix[cur[1]][cur[2]] == color) do
@@ -99,6 +101,7 @@ local function check_cell_triplets(cell, dy, dx)
     end
     return res
   else
+    matrix[cell[1]][cell[2]] = color --[[ reverse change --]]
     return nil
   end
 end
@@ -106,33 +109,32 @@ end
 
 
 local function check_triples()
-  res = false
+  res = {}
   for y = up_edge, down_edge do
     for x = left_edge, right_edge do
       cell = {y, x}
       vertical_res = check_cell_triplets(cell, 1, 0)
       if vertical_res ~= nil then 
         for key, cell in pairs(vertical_res) do
-          matrix[cell[1]][cell[2]] = empty_cell
+          table.insert(res, cell)
         end
-        res = true
       end
-      
-      if (cell[1] == 5)and(cell[2] == 1) then
-        kek = 'w'
-      end
-      
+            
       horizontal_res = check_cell_triplets(cell, 0, 1)
       if horizontal_res ~= nil then
         for key, cell in pairs(horizontal_res) do
-          matrix[cell[1]][cell[2]] = empty_cell
+          table.insert(res, cell)
         end
-        res = true
       end
       
     end
   end
   return res
+end
+local function remove_cells(cells)
+  for _,cell in pairs(cells) do
+    matrix[cell[1]][cell[2]] = empty_cell
+  end
 end
 local function is_stalled()
   directions = {{0,1},{0,-1},{1,0},{-1,0}}
@@ -165,8 +167,8 @@ function init()
         matrix[y][x] = math.random(0,colors_count-1)
       end
     end
-    kek = "w"
-  until (is_stalled() == false) and (check_triples() == false)
+    triples = check_triples()
+  until (is_stalled() == false) and (#triples == 0)
 end
 
 function tick() --[[ returns true if any movement was made --]]
@@ -176,7 +178,9 @@ function tick() --[[ returns true if any movement was made --]]
     return true
   end
   
-  if check_triples() then --[[ if new triple found --]]
+  triples = check_triples()
+  if #triplets ~= 0 then --[[ if new triple found --]]
+    remove_cells(triples)
     return true
   end
   
@@ -195,6 +199,16 @@ function move(from, to)
 end
 
 function mix()
+  repeat
+    for i = 1,(right_edge - left_edge)*(down_edge - up_edge) do
+      x1 = math.random(left_edge,right_edge)
+      x2 = math.random(left_edge,right_edge)
+      y1 = math.random(up_edge,down_edge)
+      y2 = math.random(up_edge,down_edge)
+      matrix[x1][y1], matrix[x2][y2] = matrix[x2][y2], matrix[x1][y1]
+    end
+    triples = check_triples()
+  until (#triples == 0) and (is_stalled() == false)
 end
 
 function dump()
@@ -230,9 +244,9 @@ while (input ~=exit) do
         dump()
       until tick() == false
   
-      while is_stalled() do
+      if is_stalled() then
         mix()
-      end --[[ while --]]
+      end --[[ if stalled --]]
     end --[[ if move--]]
   end --[[ if from--]]
   
