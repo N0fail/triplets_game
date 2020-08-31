@@ -23,8 +23,8 @@ local up_edge = 0
 local down_edge = 9
 local colors_count = 6
 
-local explosion = -29;
-local empty = -32;
+local explosion_cell = -30;
+local empty_cell = -33;
 
 local exit = "exit"
 
@@ -55,7 +55,24 @@ local function is_stalled()
 end
 
 local function fall()
-  return false
+  res = false
+  for y = down_edge, up_edge + 1, -1 do
+    for x = left_edge, right_edge do
+      if (matrix[y][x] == empty_cell)and(matrix[y-1][x] < colors_count)and(matrix[y-1][x] >= 0) then
+        matrix[y][x], matrix[y-1][x] = matrix[y-1][x], matrix[y][x]
+        res = true
+      end
+    end
+  end
+  return res
+end
+
+local function fill_top()
+  for x = left_edge, right_edge do
+    if matrix[0][x] == empty_cell then
+      matrix[0][x] = math.random(0,colors_count-1)
+    end
+  end
 end
 
 local function check_cell_triplets(cell, dy, dx)
@@ -100,17 +117,19 @@ local function check_triples()
       vertical_res = check_cell_triplets(cell, 1, 0)
       if vertical_res ~= nil then 
         for key, cell in pairs(vertical_res) do
-          if pcall(function()matrix[cell[1]][cell[2]] = explosion end) == false then
-            heh = "kek"
-          end
+          matrix[cell[1]][cell[2]] = empty_cell
         end
         res = true
+      end
+      
+      if (cell[1] == 5)and(cell[2] == 1) then
+        kek = 'w'
       end
       
       horizontal_res = check_cell_triplets(cell, 0, 1)
       if horizontal_res ~= nil then
         for key, cell in pairs(horizontal_res) do
-          matrix[cell[1]][cell[2]] = explosion
+          matrix[cell[1]][cell[2]] = empty_cell
         end
         res = true
       end
@@ -125,7 +144,7 @@ function init()
     for y = up_edge, down_edge do
       matrix[y] = {}
       for x = left_edge, right_edge do
-        matrix[y][x] = math.random(colors_count)
+        matrix[y][x] = math.random(0,colors_count-1)
       end
     end
     kek = "w"
@@ -134,7 +153,8 @@ end
 
 function tick() --[[ returns true if any movement was made --]]
   
-  if fall(matrix) then --[[ if some pieces fall --]]
+  if fall() then --[[ if some pieces fall --]]
+    fill_top()
     return true
   end
   
@@ -143,6 +163,7 @@ function tick() --[[ returns true if any movement was made --]]
   end
   
   return false
+
 end
 
 function move(from, to)
@@ -161,7 +182,7 @@ end
 function dump()
   for y = up_edge, down_edge do
       for x = left_edge, right_edge do
-        field[y+3][x+2] = string.char(string.byte("A") + matrix[y][x] - 1)
+        field[y+3][x+2] = string.char(string.byte("A") + matrix[y][x])
       end
   end
 
