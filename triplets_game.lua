@@ -23,6 +23,9 @@ local up_edge = 0
 local down_edge = 9
 local colors_count = 6
 
+local explosion = -29;
+local empty = -32;
+
 local exit = "exit"
 
 local function handle_input(input)
@@ -55,8 +58,66 @@ local function fall()
   return false
 end
 
+local function check_cell_triplets(cell, dy, dx)
+  local res = {cell}
+  if (matrix[cell[1]][cell[2]] >= 0) and (matrix[cell[1]][cell[2]] < colors_count) then
+    color = matrix[cell[1]][cell[2]]
+  else
+    return nil
+  end
+  
+  for dir = -1, 1, 2 do
+    cur = {cell[1] + dir*dy, cell[2] + dir*dx}
+    while (cur[1] <= down_edge)and(cur[1] >= up_edge)and(cur[2] <= right_edge)and(cur[2] >= left_edge)and(matrix[cur[1]][cur[2]] == color) do
+      table.insert(res, {cur[1], cur[2]})
+      cur[1] = cur[1] + dir*dy;
+      cur[2] = cur[2] + dir*dx;
+    end
+  end
+  
+  if #res >= 3 then
+    for i = 2, #res do
+      local another_res = check_cell_triplets(res[i], 1 - dy, 1 - dx)
+      if another_res ~= nil then     
+        for j = 2, #another_res do
+          table.insert(res, another_res[j])
+        end
+      end
+    end
+    return res
+  else
+    return nil
+  end
+end
+
+
+
 local function check_triples()
-  return false
+  res = false
+  for y = up_edge, down_edge do
+    for x = left_edge, right_edge do
+      cell = {y, x}
+      vertical_res = check_cell_triplets(cell, 1, 0)
+      if vertical_res ~= nil then 
+        for key, cell in pairs(vertical_res) do
+          if pcall(function()matrix[cell[1]][cell[2]] = explosion end) == false then
+            heh = "kek"
+          end
+        end
+        res = true
+      end
+      
+      horizontal_res = check_cell_triplets(cell, 0, 1)
+      if horizontal_res ~= nil then
+        for key, cell in pairs(horizontal_res) do
+          matrix[cell[1]][cell[2]] = explosion
+        end
+        res = true
+      end
+      
+    end
+  end
+  return res
 end
 
 function init()
